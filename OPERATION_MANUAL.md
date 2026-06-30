@@ -55,12 +55,6 @@ export DEFAULT_PASSWORD="你的密码"
 }
 ```
 
-方式 C — 交互式配置：
-```bash
-cd ../skill-pandadata-api
-python scripts/setup_runtime.py
-```
-
 **DeepSeek API（LLM 分析）：**
 
 ```bash

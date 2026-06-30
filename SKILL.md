@@ -40,8 +40,6 @@ quantSkills:
     stock picks with DeepSeek LLM analysis and z-score industry neutralization.
     Fund flow uses 3-path fallback: Tonghuashun → East Money (AKShare) → East Money direct.
   license: MIT
-  requires:
-  - skill-pandadata-api
 ---
 
 # Post-Market Screener
@@ -51,8 +49,7 @@ After each A-share trading day, scan the entire market with dual-factor (technic
 ## Workflow
 
 1. **Determine the target date.** If the user does not provide one, use the latest completed A-share trading day. Check `get_last_trade_date` and `get_trade_cal`; if the target date is closed, return a short "今日休市" note instead of running the scan.
-2. **Load `pandadata-api`** before making real API calls. Use its method index or search script to confirm parameters and fields; do not guess Pandadata signatures.
-3. **Collect data** in this order:
+2. **Collect data** in this order:
    - Trading calendar and stock universe: `get_last_trade_date`, `get_trade_cal`, `get_trade_list`.
    - Daily K-line (120 days for pattern calculation window): `get_stock_daily`.
    - Fund flow per stock: **同花顺 (Tonghuashun/10jqka)** `stock_fund_flow_individual` as primary source. Falls back to AKShare `stock_individual_fund_flow_rank` (东方财富), then direct East Money push2 API on failure. The flow source is tracked via `df.attrs["flow_source"]` and persisted in cache metadata.
@@ -78,7 +75,7 @@ After each A-share trading day, scan the entire market with dual-factor (technic
 
 ## Pandadata Reference
 
-Read `references/pandadata-map.md` when planning calls, selecting fields, or deciding how to degrade if a data interface is unavailable. The map is a routing aid only; the exact call contract must still come from `pandadata-api`.
+Read `references/pandadata-map.md` when planning calls, selecting fields, or deciding how to degrade if a data interface is unavailable. The map documents which Pandadata endpoint serves each data requirement.
 
 ## Scoring Formula
 
