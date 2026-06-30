@@ -14,7 +14,7 @@
 ## 今日精选
 
 {{#each stocks}}
-### {{rank}}. {{name}}（{{code}}） 得分 {{score}} | {{pct_change}}%
+### {{rank}}. {{name}}（{{code}}） 得分 {{score}} | 收盘 {{close}} | {{pct_change}}%
 
 > {{llm_analysis}}
 

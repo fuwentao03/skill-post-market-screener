@@ -52,7 +52,7 @@ REPORT_TEMPLATE = """# 收盘扫描日报 — {trade_date}
 > **风险提示：** 本报告由自动化扫描系统生成，所有数据仅供参考，不构成任何投资建议。股市有风险，投资需谨慎。
 """
 
-STOCK_ENTRY_TEMPLATE = """### {rank}. {name}（{code}） 得分 {score} | {pct_change}
+STOCK_ENTRY_TEMPLATE = """### {rank}. {name}（{code}） 得分 {score} | 收盘 {close} | {pct_change}
 
 {llm_badge}> {llm_analysis}
 
@@ -157,6 +157,7 @@ def generate_markdown(
             name=s.get("name", "?"),
             code=s.get("code", "?"),
             score=_safe_format(s.get("score"), ".1f"),
+            close=_safe_format(s.get("close"), ".2f"),
             pct_change=pct_str,
             llm_badge=llm_badge,
             llm_analysis=s.get("llm_analysis", "（分析待生成）"),
