@@ -121,7 +121,7 @@ Options:
   --top-n N         报告中的个股数量（默认：config.json scan.top_n，回退 20）
 ```
 
-### 2.3 数据来源
+### 2.4 数据来源
 
 | 数据类别 | 来源 | 说明 |
 |---|---|---|
@@ -193,6 +193,23 @@ Options:
   },
   "output": {
     "dir": "output"
+  },
+  "detector_weights": {
+    "ma_golden_cross": 2,
+    "macd_golden_cross": 1,
+    "bullish_alignment": 1,
+    "volume_breakout": 3,
+    "bollinger_breakout": 3,
+    "hammer": 1,
+    "morning_star": 3,
+    "rsi_oversold": 1
+  },
+  "backtest": {
+    "last_run": "2026-06-30",
+    "n_stocks": 1000,
+    "n_records": 233894,
+    "method": "Spearman rank IC (5d forward return)",
+    "note": "Weights calibrated against real cache data. Re-run quarterly."
   }
 }
 ```
@@ -211,6 +228,12 @@ Options:
 | `llm.model` | string | — | 模型名称，会被环境变量 `ANTHROPIC_MODEL` 覆盖 |
 | `llm.max_tokens` | int | `1536` | LLM 单次响应最大 token 数（含 DeepSeek 思考 token） |
 | `output.dir` | string | `output` | 报告输出根目录（日期子文件夹自动创建） |
+| `detector_weights.*` | int | — | 各形态检测器权重，由回测脚本校准后写入 |
+| `backtest.last_run` | string | — | 最近一次回测校准日期 |
+| `backtest.n_stocks` | int | — | 回测样本股票数 |
+| `backtest.n_records` | int | — | 回测信号记录总数 |
+| `backtest.method` | string | — | 回测方法说明 |
+| `backtest.note` | string | — | 回测备注 |
 
 ### 4.3 环境变量
 
@@ -295,11 +318,11 @@ Options:
 
 | 形态 | 权重 | 触发条件 |
 |---|---|---|
-| 放量突破 | 4 | 收盘 20 日新高 + 量 > 1.5×5 日均量 |
+| 放量突破 | 3 | 收盘 20 日新高 + 量 > 1.5×5 日均量 |
 | 布林带突破 | 3 | 带宽扩张 + 收盘突破上轨 |
 | 启明星 | 3 | 阴→小实体→阳 三日反转 |
 | 均线金叉 | 2 | MA5 上穿 MA20 |
-| RSI超卖反弹 | 2 | RSI(14) < 30 + 当日收阳 |
+| RSI超卖反弹 | 1 | RSI(14) < 30 + 当日收阳 |
 | MACD金叉 | 1 | DIF 上穿 DEA |
 | 多头排列 | 1 | MA5 > MA10 > MA20 > MA60 |
 | 锤子线 | 1 | 下影线 ≥ 2×实体 + 下跌趋势中 |

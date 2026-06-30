@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Backtest framework for pattern detector weight validation.
 
-Computes per-detector hit rate, IC, and excess return from historical
+Computes per-detector Spearman rank IC (1/3/5/10/20d forward returns),
+hit rate, mean excess return, and bootstrap IC IR from historical
 K-line data. Generates statistically-grounded weight recommendations.
 
+Supports single-period backtest and rolling-window stability analysis.
+
 Usage:
-    python scripts/analyze_weights.py --mock             # Demo with mock data (50 stocks × 120d)
+    python scripts/analyze_weights.py --mock                           # Demo with mock data (50 stocks × 120d)
     python scripts/analyze_weights.py --mock --n-stocks 200 --n-days 250
-    python scripts/analyze_weights.py --data <parquet_dir>   # Real data (future)
+    python scripts/analyze_weights.py --data cache/ --json             # Real data: IC analysis → JSON
+    python scripts/analyze_weights.py --data cache/ --sample 1000 --json  # Sample 1000 stocks
+    python scripts/analyze_weights.py --data cache/ --rolling           # Rolling window stability
+    python scripts/analyze_weights.py --data cache/ --rolling --window-size 60 --window-step 20
 """
 
 from __future__ import annotations
