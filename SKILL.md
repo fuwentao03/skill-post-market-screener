@@ -10,7 +10,7 @@ description: Daily A-share end-of-day quantitative screener that finds stocks wi
 license: MIT
 metadata:
   organization: QuantSkills
-  organization_url: https://github.com/quantskills
+  organization_url: https://www.quantskills.ai
   repository: skill-post-market-screener
   project_type: skill
   collection: post-market-screener
@@ -72,6 +72,7 @@ After each A-share trading day, scan the entire market with dual-factor (technic
 7. **Generate per-stock LLM analysis** using `references/report-template.md` for the analysis prompt. Each stock gets detailed Chinese analysis (technical breakdown + fund verification + sector context + risk notes).
 8. **Render the report** with data provenance table showing the actual source for each data category. Save to `output/YYYY-MM-DD/daily_screener_YYYYMMDD.md` and `output/YYYY-MM-DD/daily_screener_YYYYMMDD.json` unless the user gives another path.
 9. **Run `scripts/validate_screener.py <md-path> <json-path>`** after writing the output. Production runs use `--strict` mode. Fix missing sections, missing data-source labels, or missing pattern descriptions before presenting the result.
+10. **Periodic backtest & weight calibration.** After accumulating ≥60 trading days of fresh K-line data in cache, run `scripts/analyze_weights.py --data cache/ --json` to compute per-detector Spearman rank IC (1d/3d/5d/10d/20d forward returns). Save the resulting weights to `config.json` under `detector_weights`. The pipeline automatically loads calibrated weights via `apply_weights_from_config()` at startup. Re-run quarterly to keep weights current.
 
 ## Pandadata Reference
 
@@ -80,7 +81,7 @@ Read `references/pandadata-map.md` when planning calls, selecting fields, or dec
 ## Scoring Formula
 
 ```
-pattern_score = sum(triggered_pattern_weights)   # see pattern-formulas.md for weights
+pattern_score = sum(triggered_pattern_weights)   # weights from config.json detector_weights or DETECTOR_REGISTRY defaults
 flow_score    = min(main_inflow_rate_decimal / 0.05, 3)  # 1 point per 5% inflow rate, capped at 3
 quality_bonus:
   +1  if market_cap >= 50B CNY
@@ -115,7 +116,7 @@ skill-post-market-screener/
 ├── README.md                        # Human documentation
 ├── OPERATION_MANUAL.md              # Detailed operation manual
 ├── LICENSE                          # GPLv3
-├── config.json                      # Runtime configuration
+├── config.json                      # Runtime config + backtest-calibrated weights
 ├── pyproject.toml                   # Python project metadata + linting config
 ├── .env.example                     # Environment variable template
 ├── requirements.txt                 # Python dependencies

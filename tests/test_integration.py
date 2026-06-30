@@ -54,10 +54,10 @@ class TestScorer:
                     "volume_breakout", "bollinger_breakout", "hammer",
                     "morning_star", "rsi_oversold"]}
         score_dict = compute_score(results, inflow_rate=0.15, market_cap=80, turnover=30000)
-        assert score_dict["pattern_score"] == 17
+        assert score_dict["pattern_score"] == 15  # 2+1+1+3+3+1+3+1 = 15 (backtest-calibrated)
         assert score_dict["flow_score"] == 3.0  # min(0.15/0.05, 3) = 3
         assert score_dict["quality_bonus"] == 2  # mcap >= 50 AND turnover >= 20000
-        assert score_dict["score"] == 22.0
+        assert score_dict["score"] == 20.0
 
     def test_compute_score_no_patterns(self):
         """Zero patterns → score 0 or flow-only."""
@@ -77,7 +77,7 @@ class TestScorer:
         score_dict = compute_score(results, inflow_rate=-0.05, market_cap=70, turnover=25000)
         assert score_dict["flow_score"] == 0
         assert score_dict["quality_bonus"] == 2
-        assert score_dict["score"] == 5 + 0 + 2  # bull(1) + vol_breakout(4)
+        assert score_dict["score"] == 4 + 0 + 2  # bull(1) + vol_breakout(3)
 
     def test_compute_score_flow_capped(self):
         """Flow score capped at 3.0."""

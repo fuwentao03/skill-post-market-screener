@@ -465,9 +465,9 @@ class TestRegistry:
         assert set(DETECTOR_REGISTRY.keys()) == expected
 
     def test_weights_sum(self):
-        """Weights should sum to 17 (2+2+3+3+2+2+2+1)."""
+        """Weights should sum to 15 (2+1+1+3+3+1+3+1)."""
         total = sum(v["weight"] for v in DETECTOR_REGISTRY.values())
-        assert total == 17
+        assert total == 15
 
     def test_every_entry_has_func_label_weight(self):
         for key, entry in DETECTOR_REGISTRY.items():
@@ -499,11 +499,11 @@ class TestRegistry:
     def test_get_pattern_score(self):
         results = {
             "bullish_alignment": 0.8,   # weight 1 → triggered
-            "volume_breakout": 1.5,      # weight 4 → triggered
+            "volume_breakout": 1.5,      # weight 3 → triggered
             "ma_golden_cross": -0.2,     # not triggered
-            "rsi_oversold": 2.0,         # weight 2 → triggered
+            "rsi_oversold": 2.0,         # weight 1 → triggered
         }
-        assert get_pattern_score(results) == 7  # 1 + 4 + 2
+        assert get_pattern_score(results) == 5  # 1 + 3 + 1
 
     def test_exception_in_detector_returns_zero(self):
         """Detector that raises → 0.0, not crash."""

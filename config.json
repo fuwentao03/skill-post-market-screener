@@ -29,5 +29,22 @@
   },
   "output": {
     "dir": "output"
+  },
+  "detector_weights": {
+    "ma_golden_cross": 2,
+    "macd_golden_cross": 1,
+    "bullish_alignment": 1,
+    "volume_breakout": 3,
+    "bollinger_breakout": 3,
+    "hammer": 1,
+    "morning_star": 3,
+    "rsi_oversold": 1
+  },
+  "backtest": {
+    "last_run": "2026-06-30",
+    "n_stocks": 1000,
+    "n_records": 233894,
+    "method": "Spearman rank IC (5d forward return)",
+    "note": "Weights calibrated against real cache data (2025-11-03 ~ 2026-06-29). Re-run after each quarter."
   }
 }

@@ -18,6 +18,7 @@ from .cache import CacheManager
 from .data_fetcher import DataFetcher, _load_config
 from .flow_filter import FlowFilter, normalize_inflow_rate
 from .pattern_detector import (
+    apply_weights_from_config,
     get_pattern_details,
     get_triggered_labels,
     run_all_detectors,
@@ -449,11 +450,19 @@ class ScreenerPipeline:
         total_stocks = len(symbols)
         logger.info("Total stocks with K-line data: %d", total_stocks)
 
-        # 2. Pattern detection config
+        # 2. Load optimized detector weights if available
+        weight_changes = apply_weights_from_config(self.config)
+        if weight_changes:
+            changed = {k: v for k, v in weight_changes.items() if v["old"] != v["new"]}
+            if changed:
+                logger.info("Backtest-optimized weights applied: %s",
+                            ", ".join(f"{k}={v['new']}" for k, v in changed.items()))
+
+        # 3. Pattern detection config
         pattern_cfg = self.config.get("patterns", {})
         active_patterns = {k for k, v in pattern_cfg.items() if v} if pattern_cfg else None
 
-        # 3. Flow filter
+        # 4. Flow filter
         t0 = time.time()
         flow_enabled = not no_flow
         logger.info("=== Step 2: Flow filter ===" if flow_enabled else "=== Step 2: Skipped ===")

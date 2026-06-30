@@ -49,8 +49,8 @@ py-modules = ["run", "mcp_server"]
 packages = ["core", "llm", "tests", "scripts"]
 
 [project.urls]
-Homepage = "https://github.com/anthropics/claude-code"
-Repository = "https://github.com/anthropics/claude-code"
+Homepage = "https://www.quantskills.ai"
+Repository = "https://github.com/fuwentao03/skill-post-market-screener"
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.md", "*.txt", "*.yaml", "*.mdc"]

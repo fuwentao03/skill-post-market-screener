@@ -76,8 +76,40 @@ export ANTHROPIC_MODEL="deepseek-v4-pro"
 | `python run.py --no-flow` | 纯形态扫描（跳过资金过滤） |
 | `python run.py --top-n 10` | 报告只显示 Top 10 只个股 |
 | `python run.py --config my_config.json` | 使用自定义配置文件 |
+| `python scripts/analyze_weights.py --data cache/ --json` | **回测权重校准**：IC分析 + 权重优化 |
 
-### 2.2 完整命令行参数
+### 2.2 权重校准（回测验证闭环）
+
+检测器权重不是固定经验值——通过历史数据回测定期校准，形成"信号 → 回测 → 优化权重 → 生产"的闭环。
+
+```bash
+# 单次回测（需 ≥60 天缓存数据）
+python scripts/analyze_weights.py --data cache/ --json
+
+# 滚动窗口稳定性分析
+python scripts/analyze_weights.py --data cache/ --rolling
+
+# 输出到 config.json
+python scripts/analyze_weights.py --data cache/ --json > /dev/null && echo "Weights saved to config.json"
+
+# 采样加速（1000 只代表样本）
+python scripts/analyze_weights.py --data cache/ --sample 1000 --json
+```
+
+**回测指标说明：**
+
+| 指标 | 说明 | 判断标准 |
+|---|---|---|
+| IC(5d) | 信号强度 vs 5 日未来收益的 Spearman 秩相关 | > 0.02 优秀，< -0.02 负向 |
+| Hit Rate | 信号触发后 5 日正收益占比 | > 50% 优秀，< 45% 需降权 |
+| IC IR | IC 均值 / IC 标准差（bootstrap） | > 0.3 稳定 |
+| 信号数 | 检测器触发次数 | < 10 不可靠，≥ 1000 统计有效 |
+
+权重调整后写入 `config.json` → `detector_weights`，流水线 `apply_weights_from_config()` 自动加载。建议每季度重跑一次。
+
+> 最近一次回测（2026-06-30）：1000 只样本、233,894 条记录。放量突破(4→3)、RSI超卖(2→1)。启明星 IC 最优。
+
+### 2.3 完整命令行参数
 
 ```
 python run.py [OPTIONS]

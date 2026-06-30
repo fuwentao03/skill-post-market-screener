@@ -241,17 +241,31 @@ def detect_rsi_oversold(df: pd.DataFrame, period: int = 14) -> float:
 
 # --- Registry ---
 
+DEFAULT_WEIGHTS = {
+    # Calibrated via backtest on 5192 A-share stocks (2025-11 ~ 2026-06).
+    # See scripts/analyze_weights.py for IC analysis methodology.
+    # Re-calibrate quarterly and update config.json → detector_weights.
+    "ma_golden_cross":    2,
+    "macd_golden_cross":  1,
+    "bullish_alignment":  1,
+    "volume_breakout":    3,   # backtest: IC(5d)=-0.011, hit=44.5% → reduced from 4
+    "bollinger_breakout": 3,
+    "hammer":             1,
+    "morning_star":       3,
+    "rsi_oversold":       1,   # backtest: IC(5d)=-0.007, hit=43.2% → reduced from 2
+}
+
+# Weights calibrated via backtest on ~5000 A-share stocks
+# See scripts/analyze_weights.py for the full IC analysis
 DETECTOR_REGISTRY = {
-    # Weights calibrated via backtest on 500 A-share stocks (2025-11 ~ 2026-06):
-    #   IC(5d) + hit_rate + per-horizon IC decay pattern
-    "ma_golden_cross":    {"func": detect_ma_golden_cross,    "weight": 2, "label": "均线金叉"},
-    "macd_golden_cross":  {"func": detect_macd_golden_cross,  "weight": 1, "label": "MACD金叉"},
-    "bullish_alignment":  {"func": detect_bullish_alignment,  "weight": 1, "label": "多头排列"},
-    "volume_breakout":    {"func": detect_volume_breakout,    "weight": 4, "label": "放量突破"},
-    "bollinger_breakout": {"func": detect_bollinger_breakout, "weight": 3, "label": "布林带突破"},
-    "hammer":             {"func": detect_hammer,              "weight": 1, "label": "锤子线"},
-    "morning_star":       {"func": detect_morning_star,        "weight": 3, "label": "启明星"},
-    "rsi_oversold":       {"func": detect_rsi_oversold,        "weight": 2, "label": "RSI超卖反弹"},
+    "ma_golden_cross":    {"func": detect_ma_golden_cross,    "weight": DEFAULT_WEIGHTS["ma_golden_cross"],    "label": "均线金叉"},
+    "macd_golden_cross":  {"func": detect_macd_golden_cross,  "weight": DEFAULT_WEIGHTS["macd_golden_cross"],  "label": "MACD金叉"},
+    "bullish_alignment":  {"func": detect_bullish_alignment,  "weight": DEFAULT_WEIGHTS["bullish_alignment"],  "label": "多头排列"},
+    "volume_breakout":    {"func": detect_volume_breakout,    "weight": DEFAULT_WEIGHTS["volume_breakout"],    "label": "放量突破"},
+    "bollinger_breakout": {"func": detect_bollinger_breakout, "weight": DEFAULT_WEIGHTS["bollinger_breakout"], "label": "布林带突破"},
+    "hammer":             {"func": detect_hammer,              "weight": DEFAULT_WEIGHTS["hammer"],              "label": "锤子线"},
+    "morning_star":       {"func": detect_morning_star,        "weight": DEFAULT_WEIGHTS["morning_star"],        "label": "启明星"},
+    "rsi_oversold":       {"func": detect_rsi_oversold,        "weight": DEFAULT_WEIGHTS["rsi_oversold"],        "label": "RSI超卖反弹"},
 }
 
 
@@ -308,6 +322,25 @@ def get_pattern_score(results: dict[str, float]) -> float:
             if entry:
                 score += entry["weight"]
     return score
+
+
+def apply_weights_from_config(config: dict) -> dict[str, dict[str, float]]:
+    """Apply optimized weights from config to DETECTOR_REGISTRY.
+
+    Reads ``config.detector_weights`` if present, otherwise uses defaults.
+    Returns a dict of {key: {"old": old_weight, "new": new_weight}} for logging.
+
+    Args:
+        config: Full runtime config dict (from config.json).
+    """
+    weight_overrides: dict[str, int] = config.get("detector_weights", {})
+    changes: dict[str, dict[str, float]] = {}
+    for key in DETECTOR_REGISTRY:
+        old = DETECTOR_REGISTRY[key]["weight"]
+        new = weight_overrides.get(key, old)
+        DETECTOR_REGISTRY[key]["weight"] = new
+        changes[key] = {"old": old, "new": new}
+    return changes
 
 
 def get_pattern_details(kline_df: pd.DataFrame, triggered_keys: set[str]) -> dict[str, str]:

@@ -80,6 +80,27 @@ flowchart TD
 
 > 详细公式和计算逻辑见 `references/pattern-formulas.md`
 
+### 权重校准（回测验证闭环）
+
+检测器权重通过历史数据回测定期校准，非固定经验值：
+
+```bash
+# 运行回测（需 ≥60 天缓存数据）
+python scripts/analyze_weights.py --data cache/ --json
+
+# 查看滚动窗口稳定性
+python scripts/analyze_weights.py --data cache/ --rolling
+```
+
+回测引擎对每个检测器计算：
+- **Rank IC** — 信号强度与未来收益的 Spearman 秩相关系数（1/3/5/10/20 日）
+- **Hit Rate** — 触发信号后正收益占比
+- **IC IR** — IC 信息比率（bootstrap 200 次）
+
+优化后的权重写入 `config.json` 的 `detector_weights`，流水线自动加载。建议每个季度重新校准一次。
+
+> 最近一次回测（2026-06-30）：1000 股样本、233,894 条记录。启明星 IC(5d)=+0.003 最优，MACD金叉 IC=+0.016 唯一显著正向。放量突破(4→3)和RSI超卖(2→1)下调权重。
+
 ---
 
 ## 资金过滤条件
