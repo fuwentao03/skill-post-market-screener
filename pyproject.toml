@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "post-market-screener"
+version = "1.0.0"
+description = "A-share post-market dual-factor stock screener with LLM analysis"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "PandaAI Team"},
+]
+keywords = ["a-share", "stock", "screener", "technical-analysis", "quant"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.22,<2.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "anthropic>=0.39.0",
+    "akshare>=1.18.0",
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+pandadata = ["panda_data>=0.0.9"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+screener = "run:main"
+screener-mcp = "mcp_server:main"
+
+[tool.setuptools]
+py-modules = ["run", "mcp_server"]
+packages = ["core", "llm", "tests", "scripts"]
+
+[project.urls]
+Homepage = "https://github.com/anthropics/claude-code"
+Repository = "https://github.com/anthropics/claude-code"
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.md", "*.txt", "*.yaml", "*.mdc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["-v", "--tb=short"]
+
+[tool.coverage.run]
+source = ["core", "llm"]
+omit = ["tests/*", "scripts/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort (import ordering)
+    "B",    # flake8-bugbear (common bugs)
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade (modern syntax)
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "llm"]

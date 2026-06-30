@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "post-market-screener": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "cwd": "${SKILL_ROOT}",
+      "env": {
+        "ANTHROPIC_AUTH_TOKEN": "${ANTHROPIC_AUTH_TOKEN}",
+        "ANTHROPIC_BASE_URL": "${ANTHROPIC_BASE_URL}",
+        "ANTHROPIC_MODEL": "${ANTHROPIC_MODEL}",
+        "DEFAULT_USERNAME": "${DEFAULT_USERNAME}",
+        "DEFAULT_PASSWORD": "${DEFAULT_PASSWORD}"
+      }
+    }
+  }
+}

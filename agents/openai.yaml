@@ -1,0 +1,52 @@
+interface:
+  display_name: "Post-Market Screener"
+  short_description: "Daily A-share dual-factor screener: 8 pattern detectors + capital flow filter with LLM analysis."
+  default_prompt: "Use the post-market-screener MCP server to run today's A-share dual-factor stock screening."
+
+tools:
+  - name: run_screener
+    description: |
+      Run the full A-share post-market dual-factor stock screener.
+      Scans all ~5189 stocks with 8 technical pattern detectors + main-capital
+      flow filtering, returns top-ranked stocks with per-stock LLM analysis.
+    parameters:
+      date:
+        type: string
+        description: Target trading date (YYYYMMDD). Defaults to latest trading day.
+        required: false
+      no_flow:
+        type: boolean
+        description: Skip fund flow filter (pattern-only scan). Default false.
+        required: false
+      top_n:
+        type: integer
+        description: Number of top-ranked stocks to return. Default 20.
+        required: false
+
+  - name: get_latest_report
+    description: |
+      Read and return the most recent daily screener Markdown report.
+      Use this to check results without re-running the scan.
+    parameters: {}
+
+  - name: check_trading_day
+    description: |
+      Check if a given date is an A-share trading day.
+      Use this before running a scan to avoid scanning on holidays.
+    parameters:
+      date:
+        type: string
+        description: Date in YYYYMMDD format. Defaults to latest trading day.
+        required: false
+
+# MCP server configuration
+mcp:
+  command: python
+  args: ["mcp_server.py"]
+  cwd: "${SKILL_ROOT}"
+  env:
+    ANTHROPIC_AUTH_TOKEN: "${ANTHROPIC_AUTH_TOKEN}"
+    ANTHROPIC_BASE_URL: "${ANTHROPIC_BASE_URL}"
+    ANTHROPIC_MODEL: "${ANTHROPIC_MODEL}"
+    DEFAULT_USERNAME: "${DEFAULT_USERNAME}"
+    DEFAULT_PASSWORD: "${DEFAULT_PASSWORD}"

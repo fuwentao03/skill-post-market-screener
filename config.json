@@ -1,0 +1,33 @@
+{
+  "pandadata": {
+    "base_url": "http://pandadata.pandaaiquant.com",
+    "username": "",
+    "password": ""
+  },
+  "scan": {
+    "min_market_cap": 30,
+    "min_turnover": 5000,
+    "top_n": 20
+  },
+  "patterns": {
+    "ma_golden_cross": true,
+    "macd_golden_cross": true,
+    "bullish_alignment": true,
+    "volume_breakout": true,
+    "bollinger_breakout": true,
+    "hammer": true,
+    "morning_star": true,
+    "rsi_oversold": true
+  },
+  "flow": {
+    "main_inflow_rate_min": 0.05,
+    "super_large_positive": true
+  },
+  "llm": {
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 1536
+  },
+  "output": {
+    "dir": "output"
+  }
+}
