@@ -144,3 +144,4 @@ Max possible pattern_score = 2+1+1+4+3+1+3+2 = 17.
 | RSI when all gains or all losses in window | RSI = 100 or 0 respectively; still valid |
 | Detector exception (e.g. NumPy error) | Returns 0.0, does not halt the scan |
 | Stale signal (cross already happened) | Returns 0.0 — only fresh crosses on the latest day trigger |
+| ST stock excluded | Stock excluded at pipeline level (list_status check). If re-enabled in future: ST stocks under ±10% have wider daily ranges → Bollinger breakout and volume breakout produce higher false-positive rates. MA/MACD crosses unchanged. Hammer/Morning Star bodies may be larger, altering the body/shadow ratio distribution. |

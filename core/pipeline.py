@@ -23,6 +23,7 @@ from .pattern_detector import (
     get_triggered_labels,
     run_all_detectors,
 )
+from .portfolio import optimize_portfolio, portfolio_summary_table
 from .reporter import save_report
 from .scorer import compute_score, rank_stocks
 
@@ -264,20 +265,30 @@ class ScreenerPipeline:
 
     @staticmethod
     def _apply_industry_neutralization(results: list[dict]) -> list[dict]:
-        """Apply z-score industry neutralization to reduce sector bias.
+        """Apply z-score industry AND market-cap neutralization.
 
-        Standardizes each stock's pattern_score within its industry:
-          z = (raw − μ_industry) / σ_industry
+        Two-stage neutralization to reduce both sector bias and size bias:
 
-        This accounts for both the mean AND the dispersion of each industry.
-        Stocks in systematically high-trigger industries (e.g., volatile tech)
-        don't get an unfair boost; stocks in quiet industries aren't penalized.
-        The result is floor-bounded at 0 so no pattern_score goes negative.
+        Stage 1 — Industry z-score:
+          z_ind = (raw − μ_industry) / σ_industry
+          Floor at 0 so no pattern_score goes negative.
+
+        Stage 2 — Market-cap z-score (added v2.1):
+          Group stocks into market-cap quintiles, then z-score within each.
+          This prevents small-cap stocks from systematically dominating
+          due to their higher pattern-trigger rates (A-share small-cap
+          factor is well-documented).
+
+          z_mcap = (z_ind − μ_mcap_group) / σ_mcap_group
+          Final neutralized score = max(0, z_ind × 0.6 + z_mcap × 0.4)
+
+        The 60/40 blend preserves more industry signal while correcting
+        for the known small-cap dominance in technical patterns.
         """
         if len(results) < 5:
             return results
 
-        # Compute per-industry mean and std of pattern_score
+        # ── Stage 1: Industry z-score ──
         ind_scores: dict[str, list[float]] = {}
         for r in results:
             ind = r.get("industry", "未知")
@@ -291,27 +302,69 @@ class ScreenerPipeline:
                 std = variance ** 0.5
             else:
                 std = 1.0
-            # Only use std normalization if there's meaningful dispersion
             if std < 0.01:
                 std = 1.0
             ind_stats[ind] = (mean, std)
 
         global_mean = sum(r["pattern_score"] for r in results) / len(results)
 
+        # Compute industry-neutralized scores
+        z_ind_scores: list[float] = []
         for r in results:
             ind = r.get("industry", "未知")
             ind_mean, ind_std = ind_stats.get(ind, (global_mean, 1.0))
             raw_ps = r["pattern_score"]
-            # z-score: subtract mean, divide by std
-            z_score = (raw_ps - ind_mean) / ind_std
-            # Floor at 0 so no negative pattern_scores
-            neutralized = max(0.0, z_score)
-            # Recompute total score
+            z_ind = (raw_ps - ind_mean) / ind_std
+            z_ind = max(0.0, z_ind)
+            z_ind_scores.append(z_ind)
             r["pattern_score_raw"] = raw_ps
-            r["pattern_score"] = round(neutralized, 2)
+            r["z_ind_score"] = round(z_ind, 4)
             r["industry_adj"] = round(ind_mean, 2)
             r["industry_std"] = round(ind_std, 4)
-            r["score"] = round(neutralized + r["flow_score"] + r["quality_bonus"], 2)
+
+        # ── Stage 2: Market-cap quintile z-score ──
+        mcap_values = [r.get("market_cap", 0) for r in results]
+        if len(set(mcap_values)) >= 5:
+            # Assign quintile labels (1=smallest, 5=largest)
+            quintile_labels = pd.qcut(mcap_values, q=5, labels=[1, 2, 3, 4, 5],
+                                       duplicates="drop")
+            mcap_groups: dict[int, list[float]] = {}
+            for i, r in enumerate(results):
+                q = int(quintile_labels[i])
+                mcap_groups.setdefault(q, []).append(z_ind_scores[i])
+                r["mcap_quintile"] = q
+
+            mcap_stats: dict[int, tuple[float, float]] = {}
+            for q, scores in mcap_groups.items():
+                mean = sum(scores) / len(scores)
+                if len(scores) > 1:
+                    variance = sum((s - mean) ** 2 for s in scores) / (len(scores) - 1)
+                    std = variance ** 0.5
+                else:
+                    std = 1.0
+                if std < 0.01:
+                    std = 1.0
+                mcap_stats[q] = (mean, std)
+
+            all_z_ind_mean = sum(z_ind_scores) / len(z_ind_scores)
+
+            for i, r in enumerate(results):
+                q = r.get("mcap_quintile", 3)
+                q_mean, q_std = mcap_stats.get(q, (all_z_ind_mean, 1.0))
+                z_mcap = (z_ind_scores[i] - q_mean) / q_std
+                z_mcap = max(0.0, z_mcap)
+                r["z_mcap_score"] = round(z_mcap, 4)
+
+                # Blend: 60% industry-neutralized + 40% mcap-neutralized
+                blended = z_ind_scores[i] * 0.6 + z_mcap * 0.4
+                r["pattern_score"] = round(blended, 2)
+                r["score"] = round(blended + r["flow_score"] + r["quality_bonus"], 2)
+        else:
+            # Not enough mcap dispersion — use industry-only
+            for i, r in enumerate(results):
+                r["pattern_score"] = round(z_ind_scores[i], 2)
+                r["score"] = round(z_ind_scores[i] + r["flow_score"] + r["quality_bonus"], 2)
+                r["mcap_quintile"] = 0
 
         return results
 
@@ -505,6 +558,13 @@ class ScreenerPipeline:
         ranked = self.analyze(ranked, dry_run=dry_run)
         stage_times["4_llm_analysis"] = round(time.time() - t0, 1)
 
+        # 5b. Portfolio optimization (v2.1)
+        t0 = time.time()
+        logger.info("=== Step 4b: Portfolio optimization ===")
+        portfolio_alloc = optimize_portfolio(ranked, kline_df, lookback=60)
+        portfolio_table = portfolio_summary_table(portfolio_alloc)
+        stage_times["4b_portfolio_opt"] = round(time.time() - t0, 1)
+
         # Build data provenance for report attestation
         data_provenance = self._build_provenance(use_mock, flow_enabled, flow_df,
                                                   flow_degraded_note, ranked)
@@ -516,6 +576,8 @@ class ScreenerPipeline:
             ranked, resolved_date, total_stocks, self.config,
             pattern_stats, industry_dist, flow_degraded_note=flow_degraded_note,
             data_provenance=data_provenance,
+            portfolio_allocation=portfolio_alloc,
+            portfolio_table=portfolio_table,
         )
         stage_times["5_save_reports"] = round(time.time() - t0, 1)
 

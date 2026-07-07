@@ -23,10 +23,15 @@ REPORT_TEMPLATE = """# 收盘扫描日报 — {trade_date}
 | 最小成交额 | {min_turnover}万 |
 | 形态检测器 | {active_detectors} |
 | 主力净流入率阈值 | {main_inflow_rate_min}% |
+| 中性化 | 行业Z-score(60%) + 市值五分位Z-score(40%) |
 
 ## 今日精选
 
 {stock_entries}
+
+## 组合优化配置
+
+{portfolio_section}
 
 ## 形态触发统计
 
@@ -44,8 +49,9 @@ REPORT_TEMPLATE = """# 收盘扫描日报 — {trade_date}
 
 - 数据截止时间：{data_cutoff}
 - 缺失或降级数据：{missing_data_note}
-- 评分公式：pattern_score（行业中性化）+ flow_score + quality_bonus（详见 JSON 输出）
+- 评分公式：pattern_score（行业+市值双重中性化）+ flow_score + quality_bonus（详见 JSON 输出）
 - 统计口径：涨跌停不含 ST、不含一字板
+- 组合优化：等权 / 最小方差 / 风险平价三种方案供参考，不构成投资建议
 
 ## 免责声明
 
@@ -129,6 +135,7 @@ def generate_markdown(
     missing_note: str = "无",
     flow_degraded_note: Optional[str] = None,
     data_provenance: Optional[dict] = None,
+    portfolio_table: Optional[str] = None,
 ) -> str:
     """Generate Markdown daily report."""
     scan_cfg = config.get("scan", {})
@@ -168,6 +175,16 @@ def generate_markdown(
         )
         stock_entries += entry
 
+    # Portfolio section
+    if portfolio_table:
+        portfolio_section = (
+            "> 以下三种配置方案供参考——等权最朴素、最小方差最保守、风险平价最均衡。"
+            "实际投资请结合个人风险承受能力和持仓集中度自行判断。\n\n"
+            + portfolio_table
+        )
+    else:
+        portfolio_section = "（K线数据不足，未生成组合优化配置）"
+
     # Pattern stats table
     if pattern_stats:
         rows = ""
@@ -198,6 +215,7 @@ def generate_markdown(
         active_detectors=active_detectors,
         main_inflow_rate_min=int(flow_cfg.get("main_inflow_rate_min", 0.05) * 100),
         stock_entries=stock_entries,
+        portfolio_section=portfolio_section,
         pattern_stats_table=pattern_stats_table,
         industry_table=industry_table,
         data_provenance_table=_render_data_provenance(data_provenance),
@@ -218,9 +236,10 @@ def generate_json(
     pattern_stats: Optional[dict] = None,
     industry_dist: Optional[dict] = None,
     data_provenance: Optional[dict] = None,
+    portfolio_allocation: Optional[dict] = None,
 ) -> dict:
     """Generate structured JSON output."""
-    return {
+    result = {
         "trade_date": trade_date,
         "scan_time": datetime.now().isoformat(),
         "total_stocks": total_stocks,
@@ -230,6 +249,16 @@ def generate_json(
         "industry_distribution": industry_dist or {},
         "data_provenance": data_provenance or {},
     }
+    if portfolio_allocation:
+        result["portfolio"] = {
+            "equal_weight": getattr(portfolio_allocation, "equal_weight", {}),
+            "min_variance": getattr(portfolio_allocation, "min_variance", {}),
+            "risk_parity": getattr(portfolio_allocation, "risk_parity", {}),
+            "min_var_cond_number": getattr(portfolio_allocation, "min_var_cond_number", 0),
+            "risk_parity_converged": getattr(portfolio_allocation, "risk_parity_converged", False),
+            "note": getattr(portfolio_allocation, "note", ""),
+        }
+    return result
 
 
 def save_report(
@@ -242,6 +271,8 @@ def save_report(
     output_dir: Optional[str] = None,
     flow_degraded_note: Optional[str] = None,
     data_provenance: Optional[dict] = None,
+    portfolio_allocation: object = None,
+    portfolio_table: Optional[str] = None,
 ) -> tuple[str, str]:
     """Save Markdown and JSON reports to output_dir.
 
@@ -261,10 +292,12 @@ def save_report(
     md_content = generate_markdown(
         stocks, trade_date, total_stocks, config, pattern_stats, industry_dist,
         missing_note, flow_degraded_note, data_provenance=data_provenance,
+        portfolio_table=portfolio_table,
     )
     json_content = generate_json(
         stocks, trade_date, total_stocks, pattern_stats, industry_dist,
         data_provenance=data_provenance,
+        portfolio_allocation=portfolio_allocation,
     )
 
     md_path = out_dir / f"daily_screener_{trade_date}.md"
